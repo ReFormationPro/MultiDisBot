@@ -1,21 +1,23 @@
-
+from .TurkishLocale import TurkishLocale
 
 class LocaleManager:
-    locale = None
+    locale = TurkishLocale
     
-    def __init__(self, locale):
+    def initialize(self, locale):
         """
         Locale is a dictionary of 'string name - translation' pairs
         """
-        self.locale = locale
+        LocaleManager.locale = locale
     
-    def get(self, stringName):
-        res = self.locale.get(stringName)
+    @staticmethod
+    def get(stringName):
+        res = LocaleManager.locale.get(stringName)
         if not res:
             return "Text not found: '%s'"%stringName
         return res
     
-    def setLocale(self, locale):
-        self.locale = locale
+    @staticmethod
+    def setLocale(locale):
+        LocaleManager.locale = locale
 
 

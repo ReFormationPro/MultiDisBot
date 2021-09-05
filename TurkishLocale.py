@@ -7,6 +7,8 @@ TurkishLocale = {
     "RemoveCmdWrongArgumentType": "Çıkart komutu argümanları yalnızca tam sayılardan oluşur.",
     "ListCmdPretext": "Kayıtlı sorular:",
     "AnswerCmdCorrect": "Doğru Cevap!",
+    "AnswerCmdIncorrect": "Yanlış cevap...",
+    "AnswerCmdNoSession": "Aktif soru yok.",
     "AskCmdNoQuestionFound": "Kaydedilmiş soru yok.",
     "AskCmdPretext": "Yeni Soru:",
     # Command names

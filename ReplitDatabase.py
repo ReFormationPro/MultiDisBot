@@ -1,57 +1,107 @@
-from Database import DatabaseManager
+"""
+db[server]["Questions"][i] = {"text": "", "answer": ""}
+"""
+
 from replit import db
+
+from .Database import DatabaseManager
 
 class ReplitDatabaseManager(DatabaseManager):
     """
     Uses replit db as its db
-    value = db[self.serverName][tableName][key] is the way
+    value = db[server][tableName][key] is the way
     it is structured
     """
+    QUESTION_TABLE = "Questions"
+    SESSION_TABLE = "Sessions"
     
-    def __init__(self, serverName):
-        DatabaseManager.__init__(self, serverName)
+    @staticmethod
+    def serverExists(server):
+        return db.get(server) != None
     
-    def serverExists(self):
-        return db.get(self.serverName) != None
+    @staticmethod
+    def createServer(server):
+        db[server] = {}
     
-    def createServer(self):
-        db[self.serverName] = {}
+    @staticmethod
+    def deleteServer(server):
+        del db[server]
     
-    def tableExists(self, tableName):
-        return db[self.serverName].get(tableName) != None
+    @staticmethod
+    def tableExists(server, tableName):
+        return db[server].get(tableName) != None
     
-    def createTable(self, tableName, unused=None):
-        db[self.serverName][tableName] = {}
+    @staticmethod
+    def createTable(server, tableName, unused=None):
+        db[server][tableName] = []
     
-    def get(table, key):
-        return db[self.serverName][table][key]
+    @staticmethod
+    def getAtIdx(server, table, idx):
+        """
+        Returns the entry at index idx
+        """
+        return db[server][table][str(idx)]
     
-    def add(table, key, value):
-        db[self.serverName][table][key] = value
+    @staticmethod
+    def getIdxOf(server, table, value):
+        """
+        Returns the entry at index idx
+        """
+        try:
+            return db[server][table].index(value)
+        except:
+            return None
+    
+    @staticmethod
+    def find(server, table, func):
+        """
+        Finds the first entry in the table
+        accepted by func
 
-    def removeAll(table, keyList):
+        func takes index value pairs
+
+        Returns index value pair of the entry
+        or None
+        """
+        table = db[server][table]
+        for idx, val in table.items():
+            if func(idx, val):
+                return (idx, val)
+    
+    @staticmethod
+    def add(server, table, value):
+        """
+        Adds key to the table
+        """
+        idx = len(db[server][table])
+        db[server][table][str(idx)] = value
+
+    @staticmethod
+    def remove(server, table, key):
+        """
+        Removes key from the table
+        """
+        del db[server][table][str(key)]
+
+    @staticmethod
+    def removeAll(server, table, keyList):
         """
         Remove all indexes in keyList
         Returns True if successful
         """
+        # If erasing from a list
+        #keyList = sorted(keyList, reverse=True)
         for k in keyList:
-            del db[self.serverName][table][k]
+            del db[server][table][str(k)]
     
-    def list(table):
-        return db[self.serverName][table]
+    @staticmethod
+    def list(server, table):
+        return db[server][table]
     
-    def count(table):
+    @staticmethod
+    def count(server, table):
         """
         Returns the number of entries in the table
         """
-        return len(db[self.serverName][table].keys())
-
-    def getIdx(table, idx):
-        """
-        Returns the entry at index idx
-        """
-        table = db[self.serverName][table]
-        key = table.keys()[idx]
-        return table[key]
-
+        return len(db[server][table])
 
