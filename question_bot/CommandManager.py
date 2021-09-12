@@ -2,9 +2,12 @@ from random import randint
 
 from discord.ext import commands
 
+from common.BaseCommandManager import BaseCommandManager
+from database.ReplitDatabase import ReplitDatabaseManager as RDM
+
 from .LocaleManager import LocaleManager
-from .ReplitDatabase import ReplitDatabaseManager as RDM
 from .Session import Session, SessionManager
+from .Config import Config
 
 def makeQuestion(question, answer):
     return {"text": question, "answer": answer}
@@ -49,7 +52,7 @@ async def add(ctx, questionText, answerText):
         await ctx.send(message)
         return
     server = getGuildName(ctx)
-    RDM.add(server, RDM.QUESTION_TABLE, 
+    RDM.add(server, Config.QUESTION_TABLE, 
       makeQuestion(questionText, answerText))
 
 @commands.command()
@@ -65,7 +68,7 @@ async def remove(ctx, *qIdx):
         await ctx.send(LocaleManager.get("RemoveCmdWrongArgumentType"))
         return
     RDM.removeAll(
-        getGuildName(ctx), RDM.QUESTION_TABLE, qIdx)
+        getGuildName(ctx), Config.QUESTION_TABLE, qIdx)
 
 @commands.command()
 async def list(ctx):
@@ -74,7 +77,7 @@ async def list(ctx):
     TODO List by category
     """
     questions = RDM.list(
-        getGuildName(ctx), RDM.QUESTION_TABLE)
+        getGuildName(ctx), Config.QUESTION_TABLE)
     s = LocaleManager.get("ListCmdPretext")
     for i, question in questions.items():
         s += "\n%s: %s"%(i, question["text"])
@@ -105,36 +108,23 @@ async def ask(ctx):
     """
     server = getGuildName(ctx)
     channel = getChannelName(ctx)
-    qCount = RDM.count(server, RDM.QUESTION_TABLE)
+    qCount = RDM.count(server, Config.QUESTION_TABLE)
     if qCount == 0:
         await ctx.send(LocaleManager.get("AskCmdNoQuestionFound"))
         return
     idx = randint(0, qCount-1)
-    question = RDM.getAtIdx(server, RDM.QUESTION_TABLE, idx)
+    question = RDM.getAtIdx(server, Config.QUESTION_TABLE, idx)
     # Start question session
     SessionManager.startSession(server, channel, 
         Session(channel, question["answer"]))
     await ctx.send("%s:\n%s"%(LocaleManager.get("AskCmdPretext"), 
         question["text"]))
 
-class CommandManager:
+class CommandManager(BaseCommandManager):
     bot = None
     # Every command defined above
     COMMANDS = [helpme, add, remove, list, answer, ask]
-
-    @staticmethod
-    def initialize(bot):
-        CommandManager.bot = bot
-        for cmd in CommandManager.COMMANDS:
-            bot.add_command(cmd)
     
-    @staticmethod
-    def getCommand(cmdName):
-        for cmd in CommandManager.COMMANDS:
-            # TODO Get names from active locale
-            if cmd.__name__ == cmdName:
-                return cmd
-    
-    @staticmethod
-    def getCmdHelp(cmdName):
+    @classmethod
+    def getCmdHelp(cls, cmdName):
         return LocaleManager.get(cmdName)

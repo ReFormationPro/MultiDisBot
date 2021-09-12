@@ -81,6 +81,7 @@ class News:
         
     @staticmethod
     def prettifyHeadlines(headlines):
+        # TODO
         return headlines
 
     @staticmethod

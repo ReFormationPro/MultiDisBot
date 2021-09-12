@@ -2,32 +2,31 @@ import os
 
 from discord.ext import commands
 
-from .CommandManager import CommandManager
-from .ReplitDatabase import ReplitDatabaseManager as RDM
+from question_bot.QuestionBot import QuestionBot
+from news_bot.NewsBot import NewsBot
+
+Q_BOT_ACTIVE = False
+N_BOT_ACTIVE = True
 
 bot = commands.Bot(command_prefix='$')
-CommandManager.initialize(bot)
 
 @bot.event
 async def on_guild_join(guild):
-    server = guild.name
-    if not RDM.serverExists(server):
-        RDM.createServer(server)
-        RDM.createTable(server, RDM.QUESTION_TABLE)
-        RDM.createTable(server, RDM.SESSION_TABLE)
+    if Q_BOT_ACTIVE:
+        await QuestionBot.on_guild_join(guild)
+    if N_BOT_ACTIVE:
+        await NewsBot.on_guild_join(guild)
 
 @bot.event
 async def on_guild_remove(guild):
-    server = guild.name
-    if RDM.serverExists(server):
-        RDM.deleteServer(server)
+    if Q_BOT_ACTIVE:
+        await QuestionBot.on_guild_remove(guild)
+    if N_BOT_ACTIVE:
+        await NewsBot.on_guild_remove(guild)
 
-# DEBUG
-# TODO use server id instead of server name
-server = "DeliciousMalicious's server"
-if not RDM.serverExists(server):
-    RDM.createServer(server)
-    RDM.createTable(server, RDM.QUESTION_TABLE)
-    RDM.createTable(server, RDM.SESSION_TABLE)
+if Q_BOT_ACTIVE:
+    QuestionBot.initialize(bot)
+if N_BOT_ACTIVE:
+    NewsBot.initialize(bot)
 
 bot.run(os.getenv('TOKEN'))

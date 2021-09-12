@@ -1,4 +1,6 @@
-from .ReplitDatabase import ReplitDatabaseManager as RDM
+from database.ReplitDatabase import ReplitDatabaseManager as RDM
+
+from .Config import Config
 
 class SessionManager:
     currSession = None
@@ -11,7 +13,7 @@ class SessionManager:
         """
         if SessionManager.getSession(server, channel) != None:
             return False
-        RDM.add(server, RDM.SESSION_TABLE, session.toDict())
+        RDM.add(server, Config.SESSION_TABLE, session.toDict())
         return True
 
     @staticmethod
@@ -23,9 +25,9 @@ class SessionManager:
         """
         def findChannel(idx, val):
             return val["channel"] == channel
-        result = RDM.find(server, RDM.SESSION_TABLE, findChannel)
+        result = RDM.find(server, Config.SESSION_TABLE, findChannel)
         if result != None:
-            RDM.remove(server, RDM.SESSION_TABLE, result[0])
+            RDM.remove(server, Config.SESSION_TABLE, result[0])
             return True
         else:
             return False
@@ -53,7 +55,7 @@ class SessionManager:
         """
         def findChannel(idx, val):
             return val["channel"] == channel
-        result = RDM.find(server, RDM.SESSION_TABLE, findChannel)
+        result = RDM.find(server, Config.SESSION_TABLE, findChannel)
         if result != None:
             return Session.fromDict(result[1], channel)
 

@@ -1,7 +1,7 @@
 import asyncio
 import traceback
 
-from News import News, AlarmConfig
+from news_bot.News import News, AlarmConfig
 
 async def test_in_try_except():
     try:
