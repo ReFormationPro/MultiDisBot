@@ -22,6 +22,10 @@ class ReplitDatabaseManager(DatabaseManager):
         db[server] = {}
     
     @staticmethod
+    def listServers():
+        return list(db.keys())
+
+    @staticmethod
     def deleteServer(server):
         del db[server]
     
@@ -38,7 +42,10 @@ class ReplitDatabaseManager(DatabaseManager):
         """
         Returns the entry at index idx
         """
-        return db[server][table][idx]
+        try:
+            return db[server][table][idx]
+        except IndexError as ex:
+            return None
     
     @staticmethod
     def getIdxOf(server, table, value):
