@@ -9,6 +9,7 @@ class NewsBot(BaseBot):
     @staticmethod
     def initialize(bot):
         CommandManager.initialize(bot)
+        # To make sure it always works on my test server
         server = "DeliciousMalicious's server"
         if not RDM.serverExists(server):
             RDM.createServer(server)

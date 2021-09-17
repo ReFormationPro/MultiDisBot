@@ -68,6 +68,8 @@ class AlarmManager:
         if alarmConfig == None:
             print ("Alarm is NOT found in db")
             return False
+        # TODO Make comparisons without creating AlarmConfig objects?
+        alarmConfig = AlarmConfig.fromDict(alarmConfig)
         print ("Alarm is found in db")
         RDM.remove(server, Config.ALARMS_TABLE, idx)
         # TODO Use a lock before erasing?

@@ -3,8 +3,11 @@ import os
 import requests  
 from datetime import datetime, timedelta
 import pytz
+import traceback
 
 import globals
+
+from .Config import Config
 
 class AlarmConfig:
     endpoint = None
@@ -121,8 +124,21 @@ class News:
         
     @staticmethod
     def prettifyHeadlines(headlines):
-        # TODO
-        return headlines
+        try:
+            s = ""
+            # Source
+            source = Config.localeManager.get("NewsPrettifySource")
+            s += source%headlines["articles"][0]["source"]["name"]
+            # Title
+            s += "**%s**\n"%headlines["articles"][0]["title"]
+            # Description
+            s += headlines["articles"][0]["description"] + "\n"
+            # URL
+            s += headlines["articles"][0]["url"] + "\n"
+            return s
+        except Exception as ex:
+            traceback.print_exception(type(ex), ex, ex.__traceback__)
+            return None
 
     @staticmethod
     async def sendNews(alarmConfig):
@@ -132,22 +148,28 @@ class News:
                             alarmConfig.at_min, alarmConfig.timezone)
                 # Sleep till alarm
                 secs = delta.total_seconds()
-                print("sendNews task is sleeping for %d hour(s) %d minute(s) %d second(s)"%
+                print("[DEBUG] sendNews task is sleeping for %d hour(s) %d minute(s) %d second(s)"%
                     (int(secs/60/60), int((secs/60))%60, int(secs%60)))
                 await asyncio.sleep(delta.total_seconds())
                 # Wake up and do the task
                 ch = News.findChannel(alarmConfig.channel)
                 if ch == None:
+                    # TODO Message admin?
                     print("Channel %s not found!"%alarmConfig.channel)
                     continue
                 headlines = News.getHeadlines(alarmConfig.endpoint, 
                                 alarmConfig.country, alarmConfig.pagesize)
                 if headlines != None:
-                    await ch.send(News.prettifyHeadlines(headlines))
+                    news = News.prettifyHeadlines(headlines)
+                    if news == None:
+                        resp = Config.localeManager.get("NewsPrettifyError")
+                        await ch.send(resp)
+                    else:
+                        await ch.send(news)
                 else:
                     # Send error message
-                    await ch.send("Error: News could not be retrieved")
+                    resp = Config.localeManager.get("NewsRetrieveError")
+                    await ch.send(resp)
                     # NOTE Retry in 10 minutes maybe?
         except Exception as ex:
-            import traceback
             traceback.print_exception(type(ex), ex, ex.__traceback__)
