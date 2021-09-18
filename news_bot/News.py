@@ -3,7 +3,11 @@ import os
 import requests  
 from datetime import datetime, timedelta
 import pytz
+import traceback
 
+import globals
+
+from .Config import Config
 
 class AlarmConfig:
     endpoint = None
@@ -28,6 +32,45 @@ class AlarmConfig:
         self.endpoint = endpoint
         self.country = country
         self.pagesize = 1
+    
+    def __eq__(self, other):
+        return  self.channel == other.channel and \
+                self.at_hour == other.at_hour and \
+                self.at_min == other.at_min and \
+                self.timezone == other.timezone and \
+                self.endpoint == other.endpoint and \
+                self.country == other.country and \
+                self.pagesize == other.pagesize
+
+    @staticmethod
+    def fromDict(alarmConfigDict):
+        return AlarmConfig(alarmConfigDict["channel"],
+            alarmConfigDict["at_hour"],
+            alarmConfigDict["at_min"],
+            alarmConfigDict["country"],
+            alarmConfigDict["pagesize"],
+            alarmConfigDict["timezone"],
+            alarmConfigDict["endpoint"])
+    
+    @staticmethod
+    def makeDict(channel, at_hour=12, at_min=0,
+                country='tr', pagesize=1,
+                timezone='Europe/Istanbul', 
+                endpoint='https://newsapi.org/v2/top-headlines'):
+        d = {"channel": channel,
+                "at_hour": int(at_hour),
+                "at_min": int(at_min),
+                "country": country,
+                "pagesize": int(pagesize),
+                "timezone": timezone,
+                "endpoint": endpoint}
+        return d
+
+    def toDict(self):
+        return AlarmConfig.makeDict(self.channel, self.at_hour, self.at_min,
+                                    self.country, self.pagesize, self.timezone,
+                                    self.endpoint)
+    
 
 
 class News:
@@ -69,9 +112,9 @@ class News:
         return delta
 
     @staticmethod
-    def findChannel(bot, channel):
+    def findChannel(channel):
         ch = None
-        for c in bot.guilds[0].channels:
+        for c in globals.bot.guilds[0].channels:
             if c.name == channel:
                 ch = c
                 break
@@ -81,29 +124,52 @@ class News:
         
     @staticmethod
     def prettifyHeadlines(headlines):
-        # TODO
-        return headlines
+        try:
+            s = ""
+            # Source
+            source = Config.localeManager.get("NewsPrettifySource")
+            s += source%headlines["articles"][0]["source"]["name"]
+            # Title
+            s += "**%s**\n"%headlines["articles"][0]["title"]
+            # Description
+            s += headlines["articles"][0]["description"] + "\n"
+            # URL
+            s += headlines["articles"][0]["url"] + "\n"
+            return s
+        except Exception as ex:
+            traceback.print_exception(type(ex), ex, ex.__traceback__)
+            return None
 
     @staticmethod
-    async def sendNews(bot, alarmConfig):
-        while True:
-            delta = News.calculateSecondsTillAlarm(alarmConfig.at_hour,
-                        alarmConfig.at_min, alarmConfig.timezone)
-            # Sleep till alarm
-            secs = delta.total_seconds()
-            print("sendNews task is sleeping for %d hour(s) %d minute(s) %d second(s)"%
-                (int(secs/60/60), int((secs/60))%60, int(secs%60)))
-            await asyncio.sleep(delta.total_seconds())
-            # Wake up and do the task
-            ch = News.findChannel(bot, alarmConfig.channel)
-            if ch == None:
-                print("Channel %s not found!"%alarmConfig.channel)
-                continue
-            headlines = News.getHeadlines(alarmConfig.endpoint, 
-                            alarmConfig.country, alarmConfig.pagesize)
-            if headlines != None:
-                ch.send(News.prettifyHeadlines(headlines))
-            else:
-                # Send error message
-                ch.send("Error: News could not be retrieved")
-                # NOTE Retry in 10 minutes maybe?
+    async def sendNews(alarmConfig):
+        try:
+            while True:
+                delta = News.calculateSecondsTillAlarm(alarmConfig.at_hour,
+                            alarmConfig.at_min, alarmConfig.timezone)
+                # Sleep till alarm
+                secs = delta.total_seconds()
+                print("[DEBUG] sendNews task is sleeping for %d hour(s) %d minute(s) %d second(s)"%
+                    (int(secs/60/60), int((secs/60))%60, int(secs%60)))
+                await asyncio.sleep(delta.total_seconds())
+                # Wake up and do the task
+                ch = News.findChannel(alarmConfig.channel)
+                if ch == None:
+                    # TODO Message admin?
+                    print("Channel %s not found!"%alarmConfig.channel)
+                    continue
+                headlines = News.getHeadlines(alarmConfig.endpoint, 
+                                alarmConfig.country, alarmConfig.pagesize)
+                if headlines != None:
+                    news = News.prettifyHeadlines(headlines)
+                    if news == None:
+                        resp = Config.localeManager.get("NewsPrettifyError")
+                        await ch.send(resp)
+                    else:
+                        await ch.send(news)
+                else:
+                    # Send error message
+                    resp = Config.localeManager.get("NewsRetrieveError")
+                    await ch.send(resp)
+                    # NOTE Retry in 10 minutes maybe?
+        except Exception as ex:
+            traceback.print_exception(type(ex), ex, ex.__traceback__)

@@ -2,10 +2,10 @@ from random import randint
 
 from discord.ext import commands
 
+from common.LocaleManager import LocaleManager
 from common.BaseCommandManager import BaseCommandManager
 from database.ReplitDatabase import ReplitDatabaseManager as RDM
 
-from .LocaleManager import LocaleManager
 from .Session import Session, SessionManager
 from .Config import Config
 

@@ -1,5 +1,5 @@
 from common.BaseBot import BaseBot
-from database import ReplitDatabase as RDM
+from database.ReplitDatabase import ReplitDatabaseManager as RDM
 
 from .CommandManager import CommandManager
 from .Config import Config
