@@ -6,15 +6,17 @@ from database.ReplitDatabase import ReplitDatabaseManager as RDM
 from .News import AlarmConfig, News
 from .Config import Config
 from .Alarm import AlarmManager
+from .Authorization import *
 
 @commands.command()
+@commands.check(AuthorizationManager.isAuthorized)
 async def sendnews(ctx, country='tr', query="", filter="", 
                 pagesize: int=1,
                 endpoint='https://newsapi.org/v2/top-headlines'):
     """
-    Same as alarmset but for posting an alarm immediately for one time.
+    Post news immediately for once.
     
-    Sends an alarm from "country", having keyword "query" in it.
+    Sends a news post from "country", having keyword "query" in it.
 
     Filter can be either a category or a comma separated list of sources.
     To list sources run command $sources.
@@ -32,6 +34,7 @@ async def sendnews(ctx, country='tr', query="", filter="",
     await ctx.send(resp)
 
 @commands.command()
+@commands.check(AuthorizationManager.isAuthorized)
 async def sources(ctx, category="", language="", country=""):
     """
     Lists sources.
@@ -53,6 +56,7 @@ async def sources(ctx, category="", language="", country=""):
         await ctx.send(resp)
 
 @commands.command()
+@commands.check(AuthorizationManager.isAuthorized)
 async def alarmset(ctx, channel, at_hour: int, at_min: int,
                 country='tr', query="", filter="", pagesize: int=1,
                 timezone='Europe/Istanbul', 
@@ -83,6 +87,7 @@ async def alarmset(ctx, channel, at_hour: int, at_min: int,
     await ctx.send(resp%(at_hour, at_min, channel))
 
 @commands.command()
+@commands.check(AuthorizationManager.isAuthorized)
 async def alarmunset(ctx, idx: int):
     # TODO Accept multiple indexes
     server = CommandManager.getGuildName(ctx)
@@ -100,6 +105,7 @@ async def alarmunset(ctx, idx: int):
     await ctx.send(resp)
 
 @commands.command()
+@commands.check(AuthorizationManager.isAuthorized)
 async def alarminfo(ctx):
     server = CommandManager.getGuildName(ctx)
     l = RDM.list(server, Config.ALARMS_TABLE)
@@ -111,10 +117,25 @@ async def alarminfo(ctx):
     resp += Config.localeManager.get("AlarminfoEnd")
     await ctx.send(resp)
 
+@commands.command()
+async def setup(ctx):
+    await ctx.send(
+        Config.localeManager.get("SetupCmd")%
+        Config.AUTH_ROLE)
+
+@sendnews.error
+@sources.error
+@alarmset.error
+@alarmunset.error
+@alarminfo.error
+async def auth_error_handler(ctx, error):
+    if isinstance(error, NotAuthorized):
+        await ctx.send(Config.localeManager.get("NotAuthorizedError"))
+
 class CommandManager(BaseCommandManager):
     bot = None
     # Every command defined above
-    COMMANDS = [sendnews, sources, alarmset, alarmunset, alarminfo]
+    COMMANDS = [setup, sendnews, sources, alarmset, alarmunset, alarminfo]
     
     @classmethod
     def initialize(cls, bot):
