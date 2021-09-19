@@ -11,7 +11,7 @@ class Task:
     server = None
     result = None
 
-    def __init__(self, server, alarmConfig):
+    def __init__(self, server, alarmConfig: AlarmConfig):
         self.promise = News.sendNews(alarmConfig)
         self.server = server
         self.alarmConfig = alarmConfig
@@ -36,7 +36,7 @@ class AlarmManager:
         AlarmManager.loop = asyncio.get_event_loop()
 
     @staticmethod
-    def __runAlarm(server, alarmConfig):
+    def __runAlarm(server, alarmConfig: AlarmConfig):
         """
         Creates and runs an alarm task
         """
@@ -47,7 +47,7 @@ class AlarmManager:
         return task
 
     @staticmethod
-    def addAlarm(server, alarmConfig):
+    def addAlarm(server, alarmConfig: AlarmConfig):
         """
         Creates and runs an alarm task and
         stores the alarms in the database
@@ -58,7 +58,7 @@ class AlarmManager:
         RDM.add(server, Config.ALARMS_TABLE, alarmConfig.toDict())
     
     @staticmethod
-    def removeAlarm(server, idx):
+    def removeAlarm(server, idx: int):
         """
         Cancels alarm task at index and removes it from
         the alarms table.

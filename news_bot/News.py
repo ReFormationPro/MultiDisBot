@@ -9,6 +9,25 @@ import globals
 
 from .Config import Config
 
+class Categories:
+    BUSINESS = "business"
+    ENTERTAINMENT = "entertainment"
+    GENERAL = "general"
+    HEALTH = "health"
+    SCIENCE = "science"
+    SPORTS = "sports"
+    TECHNOLOGY = "technology"
+    
+    @staticmethod
+    def isValidCategory(category):
+        """
+        No category is valid
+        """
+        valid = ["", "business","entertainment","general",
+                "health","science","sports","technology"]
+        return category in valid
+
+
 class AlarmConfig:
     endpoint = None
     country = None
@@ -17,13 +36,30 @@ class AlarmConfig:
     at_min = None
     channel = None
     pagesize = None
+    filter = None
+    query = None
+    FIELDS = ["endpoint", "country", "timezone", 
+                "at_hour", "at_min", "channel", "pagesize", 
+                "filter", "query"]
+
     def __init__(self, channel, at_hour=12, at_min=0,
-                country='tr', pagesize=1,
-                timezone='Europe/Istanbul', 
-                endpoint='https://newsapi.org/v2/top-headlines'):
+                country="tr",
+                query="",
+                filter="",
+                pagesize=1,
+                timezone="Europe/Istanbul", 
+                endpoint="https://newsapi.org/v2/top-headlines"):
         """
         Hour is in 24 hours format
         Timezone is a pytz timezone name
+        filter is either a comma separated list of sources
+        or a category.
+        If filter is empty, no filter.
+        
+        For sources check command "sources".
+
+        Valid categories: 
+        business, entertainment, general, health, science, sports, technology
         """
         self.channel = channel
         self.at_hour = at_hour
@@ -31,16 +67,15 @@ class AlarmConfig:
         self.timezone = timezone
         self.endpoint = endpoint
         self.country = country
-        self.pagesize = 1
+        self.pagesize = pagesize
+        self.filter = filter
+        self.query = query
     
     def __eq__(self, other):
-        return  self.channel == other.channel and \
-                self.at_hour == other.at_hour and \
-                self.at_min == other.at_min and \
-                self.timezone == other.timezone and \
-                self.endpoint == other.endpoint and \
-                self.country == other.country and \
-                self.pagesize == other.pagesize
+        for f in AlarmConfig.FIELDS:
+            if self.__getattribute__(f) != other.__getattribute__(f):
+                return False
+        return True
 
     @staticmethod
     def fromDict(alarmConfigDict):
@@ -48,27 +83,33 @@ class AlarmConfig:
             alarmConfigDict["at_hour"],
             alarmConfigDict["at_min"],
             alarmConfigDict["country"],
+            alarmConfigDict["query"],
+            alarmConfigDict["filter"],
             alarmConfigDict["pagesize"],
             alarmConfigDict["timezone"],
             alarmConfigDict["endpoint"])
     
     @staticmethod
-    def makeDict(channel, at_hour=12, at_min=0,
-                country='tr', pagesize=1,
+    def makeDict(channel, at_hour: int, at_min: int,
+                country='tr', query="", filter="",
+                pagesize: int = 1,
                 timezone='Europe/Istanbul', 
                 endpoint='https://newsapi.org/v2/top-headlines'):
         d = {"channel": channel,
-                "at_hour": int(at_hour),
-                "at_min": int(at_min),
+                "at_hour": at_hour,
+                "at_min": at_min,
                 "country": country,
-                "pagesize": int(pagesize),
+                "query": query,
+                "filter": filter,
+                "pagesize": pagesize,
                 "timezone": timezone,
                 "endpoint": endpoint}
         return d
 
     def toDict(self):
         return AlarmConfig.makeDict(self.channel, self.at_hour, self.at_min,
-                                    self.country, self.pagesize, self.timezone,
+                                    self.country, self.query, self.filter,
+                                    self.pagesize, self.timezone,
                                     self.endpoint)
     
 
@@ -79,12 +120,24 @@ class News:
     newsapi
     """
     @staticmethod
-    def getHeadlines(endpoint, country, pagesize):
-        resp = requests.get(endpoint, params={
+    def getHeadlines(endpoint, country, query, filter, pagesize: int):
+        params = {
             "apiKey": os.getenv('NEWS_API_KEY'),
             "country": country,
             "pageSize": pagesize
-        })
+        }
+        if query != "":
+            params["q"] = query
+        if filter != "":
+            # Filter is either a category or list of sources
+            if Categories.isValidCategory(filter):
+                params["category"] = filter
+            else:
+                params["sources"] = filter
+                # Sources cannot be used with country
+                del params["country"]
+        print("[DEBUG] ", params)
+        resp = requests.get(endpoint, params)
         if resp.status_code != 200:
             print("Error at getting headlines. Status code %s"
                 %resp.status_code)
@@ -95,7 +148,7 @@ class News:
         return headlines
     
     @staticmethod
-    def calculateSecondsTillAlarm(alarm_hour, alarm_min, timezone):
+    def calculateSecondsTillAlarm(alarm_hour: int, alarm_min: int, timezone):
         """
         Creates alarm for next HOUR.MIN in given timezone
         """
@@ -129,6 +182,7 @@ class News:
             # Source
             source = Config.localeManager.get("NewsPrettifySource")
             s += source%headlines["articles"][0]["source"]["name"]
+            print("[DEBUG]", headlines["articles"][0]["source"])
             # Title
             s += "**%s**\n"%headlines["articles"][0]["title"]
             # Description
@@ -139,6 +193,26 @@ class News:
         except Exception as ex:
             traceback.print_exception(type(ex), ex, ex.__traceback__)
             return None
+
+    @staticmethod
+    def getHeadlinesForPosting(country, query, 
+            filter, pagesize, endpoint):
+        headlines = News.getHeadlines(endpoint, 
+                        country, query,
+                        filter, pagesize)
+        if headlines != None:
+            news = News.prettifyHeadlines(headlines)
+            if news == None:
+                resp = Config.localeManager.get("NewsPrettifyError")
+                return resp
+            else:
+                return news
+        else:
+            # Send error message
+            # TODO Raise an exception here instead so that
+            # the caller can decide to retry or not
+            resp = Config.localeManager.get("NewsRetrieveError")
+            return resp
 
     @staticmethod
     async def sendNews(alarmConfig):
@@ -157,19 +231,9 @@ class News:
                     # TODO Message admin?
                     print("Channel %s not found!"%alarmConfig.channel)
                     continue
-                headlines = News.getHeadlines(alarmConfig.endpoint, 
-                                alarmConfig.country, alarmConfig.pagesize)
-                if headlines != None:
-                    news = News.prettifyHeadlines(headlines)
-                    if news == None:
-                        resp = Config.localeManager.get("NewsPrettifyError")
-                        await ch.send(resp)
-                    else:
-                        await ch.send(news)
-                else:
-                    # Send error message
-                    resp = Config.localeManager.get("NewsRetrieveError")
-                    await ch.send(resp)
-                    # NOTE Retry in 10 minutes maybe?
+                resp = News.getHeadlinesForPosting(alarmConfig.country, 
+                    alarmConfig.query, alarmConfig.filter, 
+                    alarmConfig.pagesize, alarmConfig.endpoint)
+                await ch.send(resp)
         except Exception as ex:
             traceback.print_exception(type(ex), ex, ex.__traceback__)

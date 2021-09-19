@@ -3,28 +3,72 @@ from discord.ext import commands
 from common.BaseCommandManager import BaseCommandManager
 from database.ReplitDatabase import ReplitDatabaseManager as RDM
 
-from .News import AlarmConfig
+from .News import AlarmConfig, News
 from .Config import Config
 from .Alarm import AlarmManager
 
 @commands.command()
-async def alarmset(ctx, channel, at_hour=12, at_min=0,
-                country='tr', pagesize=1,
+async def sendnews(ctx, country='tr', query="", filter="", 
+                pagesize: int=1,
+                endpoint='https://newsapi.org/v2/top-headlines'):
+    """
+    Same as alarmset but for posting an alarm immediately for one time.
+    
+    Sends an alarm from "country", having keyword "query" in it.
+
+    Filter can be either a category or a comma separated list of sources.
+    To list sources run command $sources.
+
+    Valid categories are:
+    business, entertainment, general, health, 
+    science, sports, technology 
+
+    You will probably not change the endpoint.
+    """
+    print("[DEBUG] '%s' '%s' '%s' '%d' '%s'"%(country, query, filter, 
+        pagesize, endpoint))
+    resp = News.getHeadlinesForPosting(country, query, filter, 
+        pagesize, endpoint)
+    await ctx.send(resp)
+
+@commands.command()
+async def sources(ctx, country=""):
+    #TODO List sources
+    pass
+
+@commands.command()
+async def alarmset(ctx, channel, at_hour: int, at_min: int,
+                country='tr', query="", filter="", pagesize: int=1,
                 timezone='Europe/Istanbul', 
                 endpoint='https://newsapi.org/v2/top-headlines'):
-    at_hour, at_min, pagesize  = int(at_hour), int(at_min), int(pagesize)
+    """
+    Sets an alarm for news-posting on "channel", "at_hour"."at_min",
+    where news are from "country" and "pagesize" many news at once.
+    
+    Query is for keyword search.
+
+    Filter is either a comma separated list of sources
+    or a single category.
+    For the list of sources, see sources command.
+
+    Possible categories are:
+    business, entertainment, general, health, 
+    science, sports, technology 
+
+    You will probably not change the "endpoint".
+    """
     server = CommandManager.getGuildName(ctx)
     print("Alarm set is called on %s with %d.%d"%(server, at_hour, at_min))
     AlarmManager.addAlarm(server, 
         AlarmConfig(channel, at_hour, at_min, 
-            country, pagesize, timezone, endpoint))
+            country, query, filter,
+            pagesize, timezone, endpoint))
     resp = Config.localeManager.get("AlarmSetResponse")
     await ctx.send(resp%(at_hour, at_min, channel))
 
 @commands.command()
-async def alarmunset(ctx, idx):
+async def alarmunset(ctx, idx: int):
     # TODO Accept multiple indexes
-    idx = int(idx)
     server = CommandManager.getGuildName(ctx)
     print("Alarm unset called on %s"%server)
     # NOTE We do this once more in removeAlarm
@@ -54,7 +98,7 @@ async def alarminfo(ctx):
 class CommandManager(BaseCommandManager):
     bot = None
     # Every command defined above
-    COMMANDS = [alarmset, alarmunset, alarminfo]
+    COMMANDS = [sendnews, sources, alarmset, alarmunset, alarminfo]
     
     @classmethod
     def initialize(cls, bot):
