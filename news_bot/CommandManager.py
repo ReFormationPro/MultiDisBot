@@ -32,9 +32,25 @@ async def sendnews(ctx, country='tr', query="", filter="",
     await ctx.send(resp)
 
 @commands.command()
-async def sources(ctx, country=""):
-    #TODO List sources
-    pass
+async def sources(ctx, category="", language="", country=""):
+    """
+    Lists sources.
+    """
+    srcs = News.getSources(category, language, country)
+    if srcs == None:
+        resp = Config.localeManager.get("NewsPrettifySourceRetrieveError")
+        await ctx.send(resp)
+        return
+    resp = Config.localeManager.get("NewsPrettifySourceBegin")
+    # Send 5 source at once
+    for i, s in enumerate(srcs):
+        resp += News.prettifySource(s) + "\n"
+        if i % 5 == 0:
+            # Send and clear response
+            await ctx.send(resp)
+            resp = ""
+    if resp != "":
+        await ctx.send(resp)
 
 @commands.command()
 async def alarmset(ctx, channel, at_hour: int, at_min: int,

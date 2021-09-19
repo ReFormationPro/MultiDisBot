@@ -148,6 +148,36 @@ class News:
         return headlines
     
     @staticmethod
+    def getSources(category, language, country):
+        params = {
+            "apiKey": os.getenv('NEWS_API_KEY'),
+            "category": category,
+            "language": language,
+            "country": country
+        }
+        resp = requests.get("https://newsapi.org/v2/sources", params)
+        if resp.status_code != 200:
+            print("Error at getting sources. Status code %s"
+                %resp.status_code)
+            return None
+        sources = resp.json()
+        if sources == None or len(sources["sources"]) == 0:
+            return None
+        return sources["sources"]
+
+    @staticmethod
+    def prettifySource(source):
+        try:
+            sourceBuilder = Config.localeManager.get("NewsPrettifySource")
+            sourceBuilder = sourceBuilder%(
+                source["category"], source["name"],
+                source["id"], source["url"])
+            return sourceBuilder
+        except Exception as ex:
+            traceback.print_exception(type(ex), ex, ex.__traceback__)
+            return None
+
+    @staticmethod
     def calculateSecondsTillAlarm(alarm_hour: int, alarm_min: int, timezone):
         """
         Creates alarm for next HOUR.MIN in given timezone
@@ -180,7 +210,7 @@ class News:
         try:
             s = ""
             # Source
-            source = Config.localeManager.get("NewsPrettifySource")
+            source = Config.localeManager.get("NewsPrettifyHeadline")
             s += source%headlines["articles"][0]["source"]["name"]
             print("[DEBUG]", headlines["articles"][0]["source"])
             # Title

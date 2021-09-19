@@ -10,5 +10,8 @@ TurkishLocale = {
     "AlarminfoEnd": "Dikkat: Alarm sildikten sonra indexler değişir.",
     "NewsRetrieveError": "**HATA**\nHaberler yenilenemedi.",
     "NewsPrettifyError": "**HATA**\nHaberler gösterilemedi.\nLütfen geliştiriciye bu hatayı bildirin.",
-    "NewsPrettifySource": "**Kaynak:** %s\n", # Source
+    "NewsPrettifyHeadline": "**Kaynak:** %s\n", # Source
+    "NewsPrettifySourceBegin": "Kaynaklar:\n**kategori** - **isim** - **id** - **url**:\n",
+    "NewsPrettifySource": "**%s**\t**%s**\t**%s**\t**`%s`**", #category, name, id, url
+    "NewsPrettifySourceRetrieveError": "**HATA**\nKaynaklar listelenemedi.",
 }
