@@ -185,8 +185,8 @@ class News:
         tz = pytz.timezone(timezone)
         dt = datetime.now(pytz.utc).astimezone(tz)
         # Create alarm time for today
-        alarm = datetime(dt.year, dt.month, dt.day,
-            alarm_hour, alarm_min, 0, 0).astimezone(tz)
+        alarm = tz.localize(datetime(dt.year, dt.month, dt.day,
+            alarm_hour, alarm_min, 0, 0))
         delta = alarm - dt
         if delta != abs(delta): # If negative
             # Alarm of today has passed, set for tomorrow
